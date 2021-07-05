@@ -16,6 +16,7 @@
  */
 package org.apache.dolphinscheduler.server.master.runner;
 
+import com.alibaba.fastjson.JSON;
 import org.apache.dolphinscheduler.common.Constants;
 import org.apache.dolphinscheduler.common.thread.Stopper;
 import org.apache.dolphinscheduler.common.thread.ThreadUtils;
@@ -136,40 +137,41 @@ public class MasterSchedulerService extends Thread {
     private void scheduleProcess() throws Exception {
         InterProcessMutex mutex = null;
         try {
-                    mutex = zkMasterClient.blockAcquireMutex();
+            mutex = zkMasterClient.blockAcquireMutex();
 
-                    int activeCount = masterExecService.getActiveCount();
-                    // make sure to scan and delete command  table in one transaction
-                    Command command = processService.findOneCommand();
-                    if (command != null) {
-                        logger.info("find one command: id: {}, type: {}", command.getId(),command.getCommandType());
+            int activeCount = masterExecService.getActiveCount();
+            // make sure to scan and delete command  table in one transaction
+            Command command = processService.findOneCommand();
+            if (command != null) {
+                logger.info("command: {}", JSON.toJSONString(command));
+                logger.info("find one command: id: {}, type: {}", command.getId(),command.getCommandType());
 
-                        try{
+                try{
 
-                            ProcessInstance processInstance = processService.handleCommand(logger,
-                                    getLocalAddress(),
-                                    this.masterConfig.getMasterExecThreads() - activeCount, command);
-                            if (processInstance != null) {
-                                logger.info("start master exec thread , split DAG ...");
-                                masterExecService.execute(
+                    ProcessInstance processInstance = processService.handleCommand(logger,
+                            getLocalAddress(),
+                            this.masterConfig.getMasterExecThreads() - activeCount, command);
+                    if (processInstance != null) {
+                        logger.info("start master exec thread , split DAG ...");
+                        masterExecService.execute(
                                 new MasterExecThread(
                                         processInstance
                                         , processService
                                         , nettyRemotingClient
-                                        ));
-                            }
-                        }catch (Exception e){
-                            logger.error("scan command error ", e);
-                            processService.moveToErrorCommand(command, e.toString());
-                        }
-                    } else{
-                        //indicate that no command ,sleep for 1s
-                        Thread.sleep(Constants.SLEEP_TIME_MILLIS);
+                                ));
                     }
-            } finally{
-                zkMasterClient.releaseMutex(mutex);
+                }catch (Exception e){
+                    logger.error("scan command error ", e);
+                    processService.moveToErrorCommand(command, e.toString());
+                }
+            } else{
+                //indicate that no command ,sleep for 1s
+                Thread.sleep(Constants.SLEEP_TIME_MILLIS);
             }
+        } finally{
+            zkMasterClient.releaseMutex(mutex);
         }
+    }
 
     private String getLocalAddress() {
         return NetUtils.getAddr(masterConfig.getListenPort());

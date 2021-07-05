@@ -148,6 +148,19 @@ export default {
     })
   },
 
+  getGlobalParams ({ state }, payload) {
+    return new Promise((resolve, reject) => {
+      io.get(`projects/${state.projectName}/process/global-params`, payload, res => {
+        // name
+        //[{"direct":"IN","prop":"para","type":"VARCHAR","value":"123"}]
+        // global params
+        state.globalParams = res.data
+        resolve(res.data)
+      }).catch(res => {
+        reject(res)
+      })
+    })
+  },
   /**
    * Get process definition DAG diagram details
    */

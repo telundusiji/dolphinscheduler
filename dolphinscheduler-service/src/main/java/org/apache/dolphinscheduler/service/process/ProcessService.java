@@ -490,7 +490,9 @@ public class ProcessService {
         // curing global params
         processInstance.setGlobalParams(ParameterUtils.curingGlobalParams(
                 processDefinition.getGlobalParamMap(),
-                processDefinition.getGlobalParamList(),
+//                processDefinition.getGlobalParamList(),
+                StringUtils.isBlank(command.getInstanceParameters())?
+                        processDefinition.getGlobalParamList():JSON.parseArray(command.getInstanceParameters(), Property.class),
                 getCommandTypeIfComplement(processInstance, command),
                 processInstance.getScheduleTime()));
 
@@ -596,7 +598,9 @@ public class ProcessService {
                 // Recalculate global parameters after rerun.
                 processInstance.setGlobalParams(ParameterUtils.curingGlobalParams(
                         processDefinition.getGlobalParamMap(),
-                        processDefinition.getGlobalParamList(),
+//                        processDefinition.getGlobalParamList(),
+                        StringUtils.isBlank(command.getInstanceParameters())?
+                                processDefinition.getGlobalParamList():JSON.parseArray(command.getInstanceParameters(), Property.class),
                         getCommandTypeIfComplement(processInstance, command),
                         processInstance.getScheduleTime()));
             }
@@ -683,7 +687,7 @@ public class ProcessService {
                     taskInstance.setFlag(Flag.NO);
                     this.updateTaskInstance(taskInstance);
                 }
-                initComplementDataParam(processDefinition, processInstance, cmdParam);
+                initComplementDataParam(processDefinition, processInstance, cmdParam, command);
                 break;
             case REPEAT_RUNNING:
                 // delete the recover task names from command parameter
@@ -700,7 +704,7 @@ public class ProcessService {
                 processInstance.setStartTime(new Date());
                 processInstance.setEndTime(null);
                 processInstance.setRunTimes(runTime +1);
-                initComplementDataParam(processDefinition, processInstance, cmdParam);
+                initComplementDataParam(processDefinition, processInstance, cmdParam, command);
                 break;
             case SCHEDULER:
                 break;
@@ -733,7 +737,7 @@ public class ProcessService {
      */
     private void initComplementDataParam(ProcessDefinition processDefinition,
                                          ProcessInstance processInstance,
-                                         Map<String, String> cmdParam) {
+                                         Map<String, String> cmdParam, Command command) {
         if(!processInstance.isComplementData()){
             return;
         }
@@ -745,7 +749,9 @@ public class ProcessService {
         }
         processInstance.setGlobalParams(ParameterUtils.curingGlobalParams(
                 processDefinition.getGlobalParamMap(),
-                processDefinition.getGlobalParamList(),
+//                processDefinition.getGlobalParamList(),
+                StringUtils.isBlank(command.getInstanceParameters())?
+                        processDefinition.getGlobalParamList():JSON.parseArray(command.getInstanceParameters(), Property.class),
                 CommandType.COMPLEMENT_DATA, processInstance.getScheduleTime()));
 
     }
@@ -922,7 +928,7 @@ public class ProcessService {
      * @param task task
      */
     public void createSubWorkProcess(ProcessInstance parentProcessInstance,
-                                      TaskInstance task) {
+                                     TaskInstance task) {
         if (!task.isSubProcess()) {
             return;
         }
@@ -975,9 +981,9 @@ public class ProcessService {
      * @param task
      */
     public Command createSubProcessCommand(ProcessInstance parentProcessInstance,
-                                            ProcessInstance childInstance,
-                                            ProcessInstanceMap instanceMap,
-                                            TaskInstance task) {
+                                           ProcessInstance childInstance,
+                                           ProcessInstanceMap instanceMap,
+                                           TaskInstance task) {
         CommandType commandType = getSubCommandType(parentProcessInstance, childInstance);
         TaskNode taskNode = JSONUtils.parseObject(task.getTaskJson(), TaskNode.class);
         Map<String, String> subProcessParam = JSONUtils.toMap(taskNode.getParams());
@@ -1133,7 +1139,7 @@ public class ProcessService {
                 state == ExecutionStatus.RUNNING_EXECUTION
                         || state == ExecutionStatus.KILL
                         || checkTaskExistsInTaskQueue(taskInstance)
-                ){
+        ){
             return state;
         }
         //return pasue /stop if process instance state is ready pause / stop

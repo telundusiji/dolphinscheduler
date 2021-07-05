@@ -283,6 +283,10 @@ const tasksType = {
     desc: 'DataX',
     color: '#1fc747'
   },
+  FLINKX: {
+    desc: 'FLINKX',
+    color: '#1fc747'
+  },
   SQOOP: {
     desc: 'SQOOP',
     color: '#E46F13'

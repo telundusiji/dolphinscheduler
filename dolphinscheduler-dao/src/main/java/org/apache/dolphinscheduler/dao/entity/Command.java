@@ -20,6 +20,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import org.apache.commons.lang.StringUtils;
 import org.apache.dolphinscheduler.common.enums.*;
 
 import java.util.Date;
@@ -113,6 +114,9 @@ public class Command {
      */
     @TableField("worker_group")
     private String workerGroup;
+
+    @TableField("instanceParameters")
+    private String instanceParameters;
 
     public Command() {
         this.taskDependType = TaskDependType.TASK_POST;
@@ -262,6 +266,14 @@ public class Command {
         this.workerGroup = workerGroup;
     }
 
+    public String getInstanceParameters() {
+        return instanceParameters;
+    }
+
+    public void setInstanceParameters(String instanceParameters) {
+        this.instanceParameters = instanceParameters;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -312,6 +324,9 @@ public class Command {
         if (processInstancePriority != command.processInstancePriority) {
             return false;
         }
+        if (!StringUtils.equals(instanceParameters, command.instanceParameters)) {
+            return false;
+        }
         return !(updateTime != null ? !updateTime.equals(command.updateTime) : command.updateTime != null);
 
     }
@@ -332,6 +347,7 @@ public class Command {
         result = 31 * result + (processInstancePriority != null ? processInstancePriority.hashCode() : 0);
         result = 31 * result + (updateTime != null ? updateTime.hashCode() : 0);
         result = 31 * result + (workerGroup != null ? workerGroup.hashCode() : 0);
+        result = 31 * result + (instanceParameters != null ? instanceParameters.hashCode() : 0);
         return result;
     }
     @Override
@@ -351,6 +367,7 @@ public class Command {
                 ", processInstancePriority=" + processInstancePriority +
                 ", updateTime=" + updateTime +
                 ", workerGroup='" + workerGroup + '\'' +
+                ", instanceParameters='" + instanceParameters + '\'' +
                 '}';
     }
 }

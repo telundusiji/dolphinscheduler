@@ -170,7 +170,7 @@ public class ParameterUtils {
         Map<String, String> allParamMap = new HashMap<>();
         //If it is a complement, a complement time needs to be passed in, according to the task type
         Map<String, String> timeParams = BusinessTimeUtils
-            .getBusinessTime(commandType, scheduleTime);
+                .getBusinessTime(commandType, scheduleTime);
 
         if (timeParams != null) {
             allParamMap.putAll(timeParams);
@@ -192,7 +192,7 @@ public class ParameterUtils {
 
         for (Property property : globalParamList) {
             String val = globalMap.get(property.getProp());
-            if (val != null) {
+            if (val != null && StringUtils.isBlank(property.getValue())) {
                 property.setValue(val);
             }
         }

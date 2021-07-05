@@ -1,19 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Licensed to the Apache Software Foundation (ASF) under one or more
+* contributor license agreements.  See the NOTICE file distributed with
+* this work for additional information regarding copyright ownership.
+* The ASF licenses this file to You under the Apache License, Version 2.0
+* (the "License"); you may not use this file except in compliance with
+* the License.  You may obtain a copy of the License at
+*
+*    http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 <template>
   <div class="form-model-model" v-clickoutside="_handleClose">
     <div class="title-box">
@@ -241,6 +241,13 @@
           ref="DATAX"
           :backfill-item="backfillItem">
         </m-datax>
+        <m-flinkx
+          v-if="taskType === 'FLINKX'"
+          @on-params="_onParams"
+          @on-cache-params="_onCacheParams"
+          ref="FLINKX"
+          :backfill-item="backfillItem">
+        </m-flinkx>
         <m-sqoop
           v-if="taskType === 'SQOOP'"
           @on-params="_onParams"
@@ -267,478 +274,480 @@
   </div>
 </template>
 <script>
-  import _ from 'lodash'
-  import { mapActions } from 'vuex'
-  import mLog from './log'
-  import mMr from './tasks/mr'
-  import mSql from './tasks/sql'
-  import i18n from '@/module/i18n'
-  import mShell from './tasks/shell'
-  import mSpark from './tasks/spark'
-  import mFlink from './tasks/flink'
-  import mPython from './tasks/python'
-  import JSP from './../plugIn/jsPlumbHandle'
-  import mProcedure from './tasks/procedure'
-  import mDependent from './tasks/dependent'
-  import mHttp from './tasks/http'
-  import mDatax from './tasks/datax'
-  import mConditions from './tasks/conditions'
-  import mSqoop from './tasks/sqoop'
-  import mSubProcess from './tasks/sub_process'
-  import mSelectInput from './_source/selectInput'
-  import mTimeoutAlarm from './_source/timeoutAlarm'
-  import mWorkerGroups from './_source/workerGroups'
-  import clickoutside from '@/module/util/clickoutside'
-  import disabledState from '@/module/mixin/disabledState'
-  import { isNameExDag, rtBantpl } from './../plugIn/util'
-  import mPriority from '@/module/components/priority/priority'
+import _ from 'lodash'
+import { mapActions } from 'vuex'
+import mLog from './log'
+import mMr from './tasks/mr'
+import mSql from './tasks/sql'
+import i18n from '@/module/i18n'
+import mShell from './tasks/shell'
+import mSpark from './tasks/spark'
+import mFlink from './tasks/flink'
+import mPython from './tasks/python'
+import JSP from './../plugIn/jsPlumbHandle'
+import mProcedure from './tasks/procedure'
+import mDependent from './tasks/dependent'
+import mHttp from './tasks/http'
+import mDatax from './tasks/datax'
+import mFlinkx from './tasks/flinkx'
+import mConditions from './tasks/conditions'
+import mSqoop from './tasks/sqoop'
+import mSubProcess from './tasks/sub_process'
+import mSelectInput from './_source/selectInput'
+import mTimeoutAlarm from './_source/timeoutAlarm'
+import mWorkerGroups from './_source/workerGroups'
+import clickoutside from '@/module/util/clickoutside'
+import disabledState from '@/module/mixin/disabledState'
+import { isNameExDag, rtBantpl } from './../plugIn/util'
+import mPriority from '@/module/components/priority/priority'
 
-  export default {
-    name: 'form-model',
-    data () {
-      return {
-        // loading
-        spinnerLoading: false,
-        // node name
-        name: '',
-        // description
-        description: '',
-        // Node echo data
-        backfillItem: {},
-        cacheBackfillItem: {},
-        // Resource(list)
-        resourcesList: [],
-        successNode: 'success',
-        failedNode: 'failed',
-        successBranch: '',
-        failedBranch: '',
-        conditionResult: {
-          'successNode': [],
-          'failedNode': []
+export default {
+  name: 'form-model',
+  data () {
+    return {
+      // loading
+      spinnerLoading: false,
+      // node name
+      name: '',
+      // description
+      description: '',
+      // Node echo data
+      backfillItem: {},
+      cacheBackfillItem: {},
+      // Resource(list)
+      resourcesList: [],
+      successNode: 'success',
+      failedNode: 'failed',
+      successBranch: '',
+      failedBranch: '',
+      conditionResult: {
+        'successNode': [],
+        'failedNode': []
+      },
+      // dependence
+      dependence: {},
+      // cache dependence
+      cacheDependence: {},
+      // Current node params data
+      params: {},
+      // Running sign
+      runFlag: 'NORMAL',
+      // The second echo problem caused by the node data is specifically which node hook caused the unfinished special treatment
+      isContentBox: false,
+      // Number of failed retries
+      maxRetryTimes: '0',
+      // Failure retry interval
+      retryInterval: '1',
+      // Task timeout alarm
+      timeout: {},
+      // Task priority
+      taskInstancePriority: 'MEDIUM',
+      // worker group id
+      workerGroup: 'default',
+      stateList:[
+        {
+          value: 'success',
+          label: `${i18n.$t('success')}`
         },
-        // dependence
-        dependence: {},
-        // cache dependence
-        cacheDependence: {},
-        // Current node params data
-        params: {},
-        // Running sign
-        runFlag: 'NORMAL',
-        // The second echo problem caused by the node data is specifically which node hook caused the unfinished special treatment
-        isContentBox: false,
-        // Number of failed retries
-        maxRetryTimes: '0',
-        // Failure retry interval
-        retryInterval: '1',
-        // Task timeout alarm
-        timeout: {},
-        // Task priority
-        taskInstancePriority: 'MEDIUM',
-        // worker group id
-        workerGroup: 'default',
-        stateList:[
-          {
-            value: 'success',
-            label: `${i18n.$t('success')}`
-          },
-          {
-            value: 'failed',
-            label: `${i18n.$t('failed')}`
-          }
-        ]
-      }
+        {
+          value: 'failed',
+          label: `${i18n.$t('failed')}`
+        }
+      ]
+    }
+  },
+  /**
+   * Click on events that are not generated internally by the component
+   */
+  directives: { clickoutside },
+  mixins: [disabledState],
+  props: {
+    id: Number,
+    taskType: String,
+    self: Object,
+    preNode: Array,
+    rearList: Array,
+    instanceId: Number
+  },
+  methods: {
+    ...mapActions('dag', ['getTaskInstanceList']),
+    /**
+     * depend
+     */
+    _onDependent (o) {
+      this.dependence = Object.assign(this.dependence, {}, o)
     },
     /**
-     * Click on events that are not generated internally by the component
+     * cache dependent
      */
-    directives: { clickoutside },
-    mixins: [disabledState],
-    props: {
-      id: Number,
-      taskType: String,
-      self: Object,
-      preNode: Array,
-      rearList: Array,
-      instanceId: Number
+    _onCacheDependent (o) {
+      this.cacheDependence = Object.assign(this.cacheDependence, {}, o)
     },
-    methods: {
-      ...mapActions('dag', ['getTaskInstanceList']),
-      /**
-       * depend
-       */
-      _onDependent (o) {
-        this.dependence = Object.assign(this.dependence, {}, o)
-      },
-      /**
-       * cache dependent
-       */
-      _onCacheDependent (o) {
-        this.cacheDependence = Object.assign(this.cacheDependence, {}, o)
-      },
-      /**
-       * Task timeout alarm
-       */
-      _onTimeout (o) {
-        this.timeout = Object.assign({}, o)
-        this._cacheTimeOut(o)
-      },
-      /**
-       * Click external to close the current component
-       */
-      _handleClose () {
-        // this.close()
-      },
-      /**
-       * Jump to task instance
-       */
-      _seeHistory () {
-        this.self.$router.push({
-          name: 'task-instance',
-          query: {
-            processInstanceId: this.self.$route.params.id,
-            taskName: this.backfillItem.name
-          }
-        })
-        this.$modal.destroy()
-      },
-      /**
-       * Enter the child node to judge the process instance or the process definition
-       * @param  type = instance
-       */
-      _goSubProcess () {
-        if (_.isEmpty(this.backfillItem)) {
-          this.$message.warning(`${i18n.$t('The newly created sub-Process has not yet been executed and cannot enter the sub-Process')}`)
+    /**
+     * Task timeout alarm
+     */
+    _onTimeout (o) {
+      this.timeout = Object.assign({}, o)
+      this._cacheTimeOut(o)
+    },
+    /**
+     * Click external to close the current component
+     */
+    _handleClose () {
+      // this.close()
+    },
+    /**
+     * Jump to task instance
+     */
+    _seeHistory () {
+      this.self.$router.push({
+        name: 'task-instance',
+        query: {
+          processInstanceId: this.self.$route.params.id,
+          taskName: this.backfillItem.name
+        }
+      })
+      this.$modal.destroy()
+    },
+    /**
+     * Enter the child node to judge the process instance or the process definition
+     * @param  type = instance
+     */
+    _goSubProcess () {
+      if (_.isEmpty(this.backfillItem)) {
+        this.$message.warning(`${i18n.$t('The newly created sub-Process has not yet been executed and cannot enter the sub-Process')}`)
+        return
+      }
+      if (this.router.history.current.name === 'projects-instance-details') {
+        let stateId = $(`#${this.id}`).attr('data-state-id') || null
+        if (!stateId) {
+          this.$message.warning(`${i18n.$t('The task has not been executed and cannot enter the sub-Process')}`)
           return
         }
-        if (this.router.history.current.name === 'projects-instance-details') {
-          let stateId = $(`#${this.id}`).attr('data-state-id') || null
-          if (!stateId) {
-            this.$message.warning(`${i18n.$t('The task has not been executed and cannot enter the sub-Process')}`)
-            return
-          }
-          this.store.dispatch('dag/getSubProcessId', { taskId: stateId }).then(res => {
-            this.$emit('onSubProcess', {
+        this.store.dispatch('dag/getSubProcessId', { taskId: stateId }).then(res => {
+          this.$emit('onSubProcess', {
             subProcessId: res.data.subProcessInstanceId,
             fromThis: this
           })
         }).catch(e => {
-            this.$message.error(e.msg || '')
+          this.$message.error(e.msg || '')
         })
-        } else {
-          this.$emit('onSubProcess', {
-            subProcessId: this.backfillItem.params.processDefinitionId,
-            fromThis: this
-          })
-        }
-      },
-      /**
-       * return params
-       */
-      _onParams (o) {
-        this.params = Object.assign({}, o)
-      },
-
-      _onCacheParams (o) {
-        this.params = Object.assign(this.params, {}, o)
-        this._cacheItem(o)
-      },
-      _cacheTimeOut(o) {
-        this.conditionResult.successNode[0] = this.successBranch
-        this.conditionResult.failedNode[0] = this.failedBranch
-        this.$emit('cacheTaskInfo', {
-          item: {
-            type: this.taskType,
-            id: this.id,
-            name: this.name,
-            params: this.params,
-            description: this.description,
-            timeout: o,
-            runFlag: this.runFlag,
-            conditionResult: this.conditionResult,
-            dependence: this.cacheDependence,
-            maxRetryTimes: this.maxRetryTimes,
-            retryInterval: this.retryInterval,
-            taskInstancePriority: this.taskInstancePriority,
-            workerGroup: this.workerGroup,
-            status: this.status,
-            branch: this.branch
-          },
-          fromThis: this
-        })
-      },
-      _cacheItem () {
-        this.conditionResult.successNode[0] = this.successBranch
-        this.conditionResult.failedNode[0] = this.failedBranch
-        this.$emit('cacheTaskInfo', {
-          item: {
-            type: this.taskType,
-            id: this.id,
-            name: this.name,
-            params: this.params,
-            description: this.description,
-            runFlag: this.runFlag,
-            conditionResult: this.conditionResult,
-            dependence: this.cacheDependence,
-            maxRetryTimes: this.maxRetryTimes,
-            retryInterval: this.retryInterval,
-            taskInstancePriority: this.taskInstancePriority,
-            workerGroup: this.workerGroup,
-            status: this.status,
-            branch: this.branch
-          },
-          fromThis: this
-        })
-      },
-      /**
-       * verification name
-       */
-      _verifName () {
-        if (!_.trim(this.name)) {
-          this.$message.warning(`${i18n.$t('Please enter name (required)')}`)
-          return false
-        }
-        if (this.successBranch !='' && this.successBranch !=null && this.successBranch == this.failedBranch) {
-          this.$message.warning(`${i18n.$t('Cannot select the same node for successful branch flow and failed branch flow')}`)
-          return false
-        }
-        if (this.name === this.backfillItem.name) {
-          return true
-        }
-        // Name repeat depends on dom backfill dependent store
-        if (isNameExDag(this.name, _.isEmpty(this.backfillItem) ? 'dom' : 'backfill')) {
-          this.$message.warning(`${i18n.$t('Name already exists')}`)
-          return false
-        }
-        return true
-      },
-      _verifWorkGroup() {
-        let item = this.store.state.security.workerGroupsListAll.find(item => {
-          return item.id == this.workerGroup;
-        });
-        if(item==undefined) {
-          this.$message.warning(`${i18n.$t('The Worker group no longer exists, please select the correct Worker group!')}`)
-          return false;
-        }
-        return true
-      },
-      /**
-       * Global verification procedure
-       */
-      _verification () {
-        // Verify name
-        if (!this._verifName()) {
-          return
-        }
-        // verif workGroup
-        if(!this._verifWorkGroup()) {
-          return
-        }
-        // Verify task alarm parameters
-        if (!this.$refs['timeout']._verification()) {
-          return
-        }
-        // Verify node parameters
-        if (!this.$refs[this.taskType]._verification()) {
-          return
-        }
-
-        $(`#${this.id}`).find('span').text(this.name)
-        this.conditionResult.successNode[0] = this.successBranch
-        this.conditionResult.failedNode[0] = this.failedBranch
-        // Store the corresponding node data structure
-        this.$emit('addTaskInfo', {
-          item: {
-            type: this.taskType,
-            id: this.id,
-            name: this.name,
-            params: this.params,
-            description: this.description,
-            timeout: this.timeout,
-            runFlag: this.runFlag,
-            conditionResult: this.conditionResult,
-            dependence: this.dependence,
-            maxRetryTimes: this.maxRetryTimes,
-            retryInterval: this.retryInterval,
-            taskInstancePriority: this.taskInstancePriority,
-            workerGroup: this.workerGroup,
-            status: this.status,
-            branch: this.branch
-          },
-          fromThis: this
-        })
-
-        // set run flag
-        this._setRunFlag()
-      },
-      /**
-       * Sub-workflow selected node echo name
-       */
-      _onSetProcessName (name) {
-        this.name = name
-      },
-      /**
-       *  set run flag
-       */
-      _setRunFlag () {
-        let dom = $(`#${this.id}`).find('.ban-p')
-        dom.html('')
-        if (this.runFlag === 'FORBIDDEN') {
-          dom.append(rtBantpl())
-        }
-      },
-      /**
-       * Submit verification
-       */
-      ok () {
-        this._verification()
-      },
-      /**
-       * Close and destroy component and component internal events
-       */
-      close () {
-        let flag = false
-        // Delete node without storage
-        if (!this.backfillItem.name) {
-          flag = true
-        }
-        this.isContentBox = false
-        // flag Whether to delete a node this.$destroy()
-        this.$emit('close', {
-          item: this.cacheBackfillItem,
-          flag: flag,
-          fromThis: this
-        })
-      }
-    },
-    watch: {
-
-    },
-    created () {
-      // Unbind copy and paste events
-      JSP.removePaste()
-      // Backfill data
-      let taskList = this.store.state.dag.tasks
-
-      //fillback use cacheTasks
-      let cacheTasks = this.store.state.dag.cacheTasks
-      let o = {}
-      if (cacheTasks[this.id]) {
-        o = cacheTasks[this.id]
-        this.backfillItem = cacheTasks[this.id]
       } else {
-        if (taskList.length) {
-          taskList.forEach(v => {
-            if (v.id === this.id) {
-              o = v
-              this.backfillItem = v
-            }
-          })
-        }
+        this.$emit('onSubProcess', {
+          subProcessId: this.backfillItem.params.processDefinitionId,
+          fromThis: this
+        })
       }
-      // Non-null objects represent backfill
-      if (!_.isEmpty(o)) {
-        this.name = o.name
-        this.taskInstancePriority = o.taskInstancePriority
-        this.runFlag = o.runFlag || 'NORMAL'
-        this.description = o.description
-        this.maxRetryTimes = o.maxRetryTimes
-        this.retryInterval = o.retryInterval
-        if(o.conditionResult) {
-          this.successBranch = o.conditionResult.successNode[0]
-          this.failedBranch = o.conditionResult.failedNode[0]
-        }
-          // If the workergroup has been deleted, set the default workergroup
-        var hasMatch = false;
-        for (let i = 0; i < this.store.state.security.workerGroupsListAll.length; i++) {
-          var workerGroup = this.store.state.security.workerGroupsListAll[i].id
-          if (o.workerGroup == workerGroup) {
-            hasMatch = true;
-            break;
-          }
-        }
-        if(o.workerGroup == undefined) {
-          this.store.dispatch('dag/getTaskInstanceList',{
-            pageSize: 10, pageNo: 1, processInstanceId: this.instanceId, name: o.name
-          }).then(res => {
-            this.workerGroup = res.totalList[0].workerGroup
-          })
-        } else {
-          this.workerGroup = o.workerGroup
-        }
+    },
+    /**
+     * return params
+     */
+    _onParams (o) {
+      this.params = Object.assign({}, o)
+    },
 
-        this.params = o.params || {}
-        this.dependence = o.dependence || {}
-        this.cacheDependence = o.dependence || {}
-
-      } else {
-        this.workerGroup = this.store.state.security.workerGroupsListAll[0].id
-      }
-      this.cacheBackfillItem = JSON.parse(JSON.stringify(o))
-      this.isContentBox = true
+    _onCacheParams (o) {
+      this.params = Object.assign(this.params, {}, o)
+      this._cacheItem(o)
     },
-    mounted () {
-
-    },
-    updated () {
-    },
-    beforeDestroy () {
-    },
-    destroyed () {
-    },
-    computed: {
-      /**
-       * Child workflow entry show/hide
-       */
-      _isGoSubProcess () {
-        return this.taskType === 'SUB_PROCESS' && this.name
-      },
-
-      //Define the item model
-      _item () {
-        return {
+    _cacheTimeOut(o) {
+      this.conditionResult.successNode[0] = this.successBranch
+      this.conditionResult.failedNode[0] = this.failedBranch
+      this.$emit('cacheTaskInfo', {
+        item: {
           type: this.taskType,
           id: this.id,
           name: this.name,
+          params: this.params,
           description: this.description,
+          timeout: o,
           runFlag: this.runFlag,
+          conditionResult: this.conditionResult,
           dependence: this.cacheDependence,
           maxRetryTimes: this.maxRetryTimes,
           retryInterval: this.retryInterval,
           taskInstancePriority: this.taskInstancePriority,
           workerGroup: this.workerGroup,
-          successBranch: this.successBranch,
-          failedBranch: this.failedBranch
-        }
+          status: this.status,
+          branch: this.branch
+        },
+        fromThis: this
+      })
+    },
+    _cacheItem () {
+      this.conditionResult.successNode[0] = this.successBranch
+      this.conditionResult.failedNode[0] = this.failedBranch
+      this.$emit('cacheTaskInfo', {
+        item: {
+          type: this.taskType,
+          id: this.id,
+          name: this.name,
+          params: this.params,
+          description: this.description,
+          runFlag: this.runFlag,
+          conditionResult: this.conditionResult,
+          dependence: this.cacheDependence,
+          maxRetryTimes: this.maxRetryTimes,
+          retryInterval: this.retryInterval,
+          taskInstancePriority: this.taskInstancePriority,
+          workerGroup: this.workerGroup,
+          status: this.status,
+          branch: this.branch
+        },
+        fromThis: this
+      })
+    },
+    /**
+     * verification name
+     */
+    _verifName () {
+      if (!_.trim(this.name)) {
+        this.$message.warning(`${i18n.$t('Please enter name (required)')}`)
+        return false
+      }
+      if (this.successBranch !='' && this.successBranch !=null && this.successBranch == this.failedBranch) {
+        this.$message.warning(`${i18n.$t('Cannot select the same node for successful branch flow and failed branch flow')}`)
+        return false
+      }
+      if (this.name === this.backfillItem.name) {
+        return true
+      }
+      // Name repeat depends on dom backfill dependent store
+      if (isNameExDag(this.name, _.isEmpty(this.backfillItem) ? 'dom' : 'backfill')) {
+        this.$message.warning(`${i18n.$t('Name already exists')}`)
+        return false
+      }
+      return true
+    },
+    _verifWorkGroup() {
+      let item = this.store.state.security.workerGroupsListAll.find(item => {
+        return item.id == this.workerGroup;
+      });
+      if(item==undefined) {
+        this.$message.warning(`${i18n.$t('The Worker group no longer exists, please select the correct Worker group!')}`)
+        return false;
+      }
+      return true
+    },
+    /**
+     * Global verification procedure
+     */
+    _verification () {
+      // Verify name
+      if (!this._verifName()) {
+        return
+      }
+      // verif workGroup
+      if(!this._verifWorkGroup()) {
+        return
+      }
+      // Verify task alarm parameters
+      if (!this.$refs['timeout']._verification()) {
+        return
+      }
+      // Verify node parameters
+      if (!this.$refs[this.taskType]._verification()) {
+        return
+      }
+
+      $(`#${this.id}`).find('span').text(this.name)
+      this.conditionResult.successNode[0] = this.successBranch
+      this.conditionResult.failedNode[0] = this.failedBranch
+      // Store the corresponding node data structure
+      this.$emit('addTaskInfo', {
+        item: {
+          type: this.taskType,
+          id: this.id,
+          name: this.name,
+          params: this.params,
+          description: this.description,
+          timeout: this.timeout,
+          runFlag: this.runFlag,
+          conditionResult: this.conditionResult,
+          dependence: this.dependence,
+          maxRetryTimes: this.maxRetryTimes,
+          retryInterval: this.retryInterval,
+          taskInstancePriority: this.taskInstancePriority,
+          workerGroup: this.workerGroup,
+          status: this.status,
+          branch: this.branch
+        },
+        fromThis: this
+      })
+
+      // set run flag
+      this._setRunFlag()
+    },
+    /**
+     * Sub-workflow selected node echo name
+     */
+    _onSetProcessName (name) {
+      this.name = name
+    },
+    /**
+     *  set run flag
+     */
+    _setRunFlag () {
+      let dom = $(`#${this.id}`).find('.ban-p')
+      dom.html('')
+      if (this.runFlag === 'FORBIDDEN') {
+        dom.append(rtBantpl())
       }
     },
-    components: {
-      mMr,
-      mShell,
-      mSubProcess,
-      mProcedure,
-      mSql,
-      mLog,
-      mSpark,
-      mFlink,
-      mPython,
-      mDependent,
-      mHttp,
-      mDatax,
-      mSqoop,
-      mConditions,
-      mSelectInput,
-      mTimeoutAlarm,
-      mPriority,
-      mWorkerGroups
+    /**
+     * Submit verification
+     */
+    ok () {
+      this._verification()
+    },
+    /**
+     * Close and destroy component and component internal events
+     */
+    close () {
+      let flag = false
+      // Delete node without storage
+      if (!this.backfillItem.name) {
+        flag = true
+      }
+      this.isContentBox = false
+      // flag Whether to delete a node this.$destroy()
+      this.$emit('close', {
+        item: this.cacheBackfillItem,
+        flag: flag,
+        fromThis: this
+      })
     }
+  },
+  watch: {
+
+  },
+  created () {
+    // Unbind copy and paste events
+    JSP.removePaste()
+    // Backfill data
+    let taskList = this.store.state.dag.tasks
+
+    //fillback use cacheTasks
+    let cacheTasks = this.store.state.dag.cacheTasks
+    let o = {}
+    if (cacheTasks[this.id]) {
+      o = cacheTasks[this.id]
+      this.backfillItem = cacheTasks[this.id]
+    } else {
+      if (taskList.length) {
+        taskList.forEach(v => {
+          if (v.id === this.id) {
+            o = v
+            this.backfillItem = v
+          }
+        })
+      }
+    }
+    // Non-null objects represent backfill
+    if (!_.isEmpty(o)) {
+      this.name = o.name
+      this.taskInstancePriority = o.taskInstancePriority
+      this.runFlag = o.runFlag || 'NORMAL'
+      this.description = o.description
+      this.maxRetryTimes = o.maxRetryTimes
+      this.retryInterval = o.retryInterval
+      if(o.conditionResult) {
+        this.successBranch = o.conditionResult.successNode[0]
+        this.failedBranch = o.conditionResult.failedNode[0]
+      }
+      // If the workergroup has been deleted, set the default workergroup
+      var hasMatch = false;
+      for (let i = 0; i < this.store.state.security.workerGroupsListAll.length; i++) {
+        var workerGroup = this.store.state.security.workerGroupsListAll[i].id
+        if (o.workerGroup == workerGroup) {
+          hasMatch = true;
+          break;
+        }
+      }
+      if(o.workerGroup == undefined) {
+        this.store.dispatch('dag/getTaskInstanceList',{
+          pageSize: 10, pageNo: 1, processInstanceId: this.instanceId, name: o.name
+        }).then(res => {
+          this.workerGroup = res.totalList[0].workerGroup
+        })
+      } else {
+        this.workerGroup = o.workerGroup
+      }
+
+      this.params = o.params || {}
+      this.dependence = o.dependence || {}
+      this.cacheDependence = o.dependence || {}
+
+    } else {
+      this.workerGroup = this.store.state.security.workerGroupsListAll[0].id
+    }
+    this.cacheBackfillItem = JSON.parse(JSON.stringify(o))
+    this.isContentBox = true
+  },
+  mounted () {
+
+  },
+  updated () {
+  },
+  beforeDestroy () {
+  },
+  destroyed () {
+  },
+  computed: {
+    /**
+     * Child workflow entry show/hide
+     */
+    _isGoSubProcess () {
+      return this.taskType === 'SUB_PROCESS' && this.name
+    },
+
+    //Define the item model
+    _item () {
+      return {
+        type: this.taskType,
+        id: this.id,
+        name: this.name,
+        description: this.description,
+        runFlag: this.runFlag,
+        dependence: this.cacheDependence,
+        maxRetryTimes: this.maxRetryTimes,
+        retryInterval: this.retryInterval,
+        taskInstancePriority: this.taskInstancePriority,
+        workerGroup: this.workerGroup,
+        successBranch: this.successBranch,
+        failedBranch: this.failedBranch
+      }
+    }
+  },
+  components: {
+    mMr,
+    mShell,
+    mSubProcess,
+    mProcedure,
+    mSql,
+    mLog,
+    mSpark,
+    mFlink,
+    mPython,
+    mDependent,
+    mHttp,
+    mDatax,
+    mFlinkx,
+    mSqoop,
+    mConditions,
+    mSelectInput,
+    mTimeoutAlarm,
+    mPriority,
+    mWorkerGroups
   }
+}
 </script>
 
 <style lang="scss" rel="stylesheet/scss">
-  @import "./formModel";
-  .ans-radio-disabled {
-    .ans-radio-inner:after {
-      background-color: #6F8391
-    }
+@import "./formModel";
+.ans-radio-disabled {
+  .ans-radio-inner:after {
+    background-color: #6F8391
   }
+}
 </style>

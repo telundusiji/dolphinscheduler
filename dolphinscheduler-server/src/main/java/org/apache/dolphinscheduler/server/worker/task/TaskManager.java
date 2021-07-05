@@ -22,6 +22,7 @@ import org.apache.dolphinscheduler.common.utils.EnumUtils;
 import org.apache.dolphinscheduler.server.entity.TaskExecutionContext;
 import org.apache.dolphinscheduler.server.worker.task.datax.DataxTask;
 import org.apache.dolphinscheduler.server.worker.task.flink.FlinkTask;
+import org.apache.dolphinscheduler.server.worker.task.flinkx.FlinkxTask;
 import org.apache.dolphinscheduler.server.worker.task.http.HttpTask;
 import org.apache.dolphinscheduler.server.worker.task.mr.MapReduceTask;
 import org.apache.dolphinscheduler.server.worker.task.processdure.ProcedureTask;
@@ -46,9 +47,9 @@ public class TaskManager {
    */
   public static AbstractTask newTask(TaskExecutionContext taskExecutionContext,
                                      Logger logger)
-      throws IllegalArgumentException {
+          throws IllegalArgumentException {
     switch (EnumUtils.getEnum(TaskType.class,taskExecutionContext.getTaskType())) {
-        case SHELL:
+      case SHELL:
         return new ShellTask(taskExecutionContext, logger);
       case PROCEDURE:
         return new ProcedureTask(taskExecutionContext, logger);
@@ -66,6 +67,8 @@ public class TaskManager {
         return new HttpTask(taskExecutionContext, logger);
       case DATAX:
         return new DataxTask(taskExecutionContext, logger);
+      case FLINKX:
+        return new FlinkxTask(taskExecutionContext,logger);
       case SQOOP:
         return new SqoopTask(taskExecutionContext, logger);
       default:
