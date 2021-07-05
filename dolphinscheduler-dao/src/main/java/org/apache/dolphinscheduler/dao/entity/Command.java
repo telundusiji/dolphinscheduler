@@ -115,7 +115,7 @@ public class Command {
     @TableField("worker_group")
     private String workerGroup;
 
-    @TableField("instanceParameters")
+    @TableField("instance_parameters")
     private String instanceParameters;
 
     public Command() {

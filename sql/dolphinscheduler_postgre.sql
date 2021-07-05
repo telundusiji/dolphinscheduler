@@ -235,7 +235,7 @@ CREATE TABLE t_ds_command (
   update_time timestamp DEFAULT NULL ,
   process_instance_priority int DEFAULT NULL ,
   worker_group varchar(64),
-  instanceParameters text ,
+  instance_parameters text ,
   PRIMARY KEY (id)
 ) ;
 
