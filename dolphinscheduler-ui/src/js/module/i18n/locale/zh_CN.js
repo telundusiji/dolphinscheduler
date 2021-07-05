@@ -92,6 +92,8 @@ export default {
   'Please enter main arguments': '请输入主程序参数',
   'Option Parameters': '选项参数',
   'Please enter option parameters': '请输入选项参数',
+  'JVM Parameters':"JVM参数",
+  'Please enter JVM parameters(optional)': '请输入JVM参数(选填)',
   Resources: '资源',
   'Custom Parameters': '自定义参数',
   'Custom template': '自定义模版',

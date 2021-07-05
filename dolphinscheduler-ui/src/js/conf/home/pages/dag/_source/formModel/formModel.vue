@@ -211,6 +211,14 @@
           ref="MR"
           :backfill-item="backfillItem">
         </m-mr>
+        <!-- java node -->
+        <m-java
+          v-if="taskType === 'JAVA'"
+          @on-params="_onParams"
+          @on-cache-params="_onCacheParams"
+          ref="JAVA"
+          :backfill-item="backfillItem">
+        </m-java>
         <!-- python node -->
         <m-python
           v-if="taskType === 'PYTHON'"
@@ -278,6 +286,7 @@ import _ from 'lodash'
 import { mapActions } from 'vuex'
 import mLog from './log'
 import mMr from './tasks/mr'
+import mJava from './tasks/java'
 import mSql from './tasks/sql'
 import i18n from '@/module/i18n'
 import mShell from './tasks/shell'
@@ -721,6 +730,7 @@ export default {
   },
   components: {
     mMr,
+    mJava,
     mShell,
     mSubProcess,
     mProcedure,

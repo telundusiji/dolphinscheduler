@@ -50,7 +50,8 @@ public enum TaskType {
     DATAX(10, "datax"),
     CONDITIONS(11, "conditions"),
     SQOOP(12, "sqoop"),
-    FLINKX(13, "flinkx");
+    FLINKX(13, "flinkx"),
+    JAVA(14, "java");
 
     TaskType(int code, String descp){
         this.code = code;

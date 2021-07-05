@@ -24,6 +24,7 @@ import org.apache.dolphinscheduler.server.worker.task.datax.DataxTask;
 import org.apache.dolphinscheduler.server.worker.task.flink.FlinkTask;
 import org.apache.dolphinscheduler.server.worker.task.flinkx.FlinkxTask;
 import org.apache.dolphinscheduler.server.worker.task.http.HttpTask;
+import org.apache.dolphinscheduler.server.worker.task.java.JavaTask;
 import org.apache.dolphinscheduler.server.worker.task.mr.MapReduceTask;
 import org.apache.dolphinscheduler.server.worker.task.processdure.ProcedureTask;
 import org.apache.dolphinscheduler.server.worker.task.python.PythonTask;
@@ -57,6 +58,8 @@ public class TaskManager {
         return new SqlTask(taskExecutionContext, logger);
       case MR:
         return new MapReduceTask(taskExecutionContext, logger);
+      case JAVA:
+        return new JavaTask(taskExecutionContext, logger);
       case SPARK:
         return new SparkTask(taskExecutionContext, logger);
       case FLINK:

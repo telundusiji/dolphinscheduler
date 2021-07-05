@@ -267,6 +267,10 @@ const tasksType = {
     desc: 'MapReduce',
     color: '#A0A5CC'
   },
+  JAVA: {
+    desc: 'JAVA',
+    color: '#A0A5DC'
+  },
   PYTHON: {
     desc: 'PYTHON',
     color: '#FED52D'
