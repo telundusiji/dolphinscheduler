@@ -23,6 +23,8 @@ export PYTHON_HOME=/opt/soft/python
 export JAVA_HOME=/opt/soft/java
 export HIVE_HOME=/opt/soft/hive
 export FLINK_HOME=/opt/soft/flink
+export FLINK_CONF_DIR=/opt/soft/flink/conf
 export DATAX_HOME=/opt/soft/datax
+export FLINKX_HOME=/opt/soft/flinkx
 
 export PATH=$HADOOP_HOME/bin:$SPARK_HOME1/bin:$SPARK_HOME2/bin:$PYTHON_HOME:$JAVA_HOME/bin:$HIVE_HOME/bin:$FLINK_HOME/bin:$DATAX_HOME/bin:$PATH
