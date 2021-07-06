@@ -990,7 +990,7 @@ public class ProcessService {
         Integer childDefineId = Integer.parseInt(subProcessParam.get(Constants.CMDPARAM_SUB_PROCESS_DEFINE_ID));
         String processParam = getSubWorkFlowParam(instanceMap, parentProcessInstance);
 
-        return new Command(
+        Command command = new Command(
                 commandType,
                 TaskDependType.TASK_POST,
                 parentProcessInstance.getFailureStrategy(),
@@ -1003,6 +1003,10 @@ public class ProcessService {
                 task.getWorkerGroup(),
                 parentProcessInstance.getProcessInstancePriority()
         );
+        if(StringUtils.isNotBlank(parentProcessInstance.getGlobalParams())){
+            command.setInstanceParameters(parentProcessInstance.getGlobalParams());
+        }
+        return command;
     }
 
     /**
